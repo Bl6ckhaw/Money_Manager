@@ -5,21 +5,18 @@ import { useTransactions } from '../../context/transactionsContext';
 import { CATEGORY_COLORS, TransactionCategory } from '../../types/transactions';
 
 export default function GraphScreen() {
-  const { transactions = [] } = useTransactions();
-
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const { transactions, selectedMonth, selectedYear, getTransactionsForMonth } = useTransactions();
 
   const monthlyExpenses = useMemo(
-    () => (transactions?? []).filter((t) => {
+    () => (getTransactionsForMonth(selectedMonth, selectedYear) ?? []).filter((t) => {
       const date = new Date(t.date);
       return (
         t.type === 'expense' &&
-        date.getMonth() === currentMonth &&
-        date.getFullYear() === currentYear
+        date.getMonth() === selectedMonth &&
+        date.getFullYear() === selectedYear
       );
     }),
-    [transactions]
+    [transactions, selectedMonth, selectedYear]
   );
 
   const grouped = useMemo(() => {
@@ -77,7 +74,7 @@ export default function GraphScreen() {
           innerRadius={70}
           centerLabelComponent={() => (
             <View style={styles.centerLabel}>
-              <Text style={styles.centerAmount}>{total.toFixed(0)}€</Text>
+              <Text style={styles.centerAmount}>{total.toFixed(2)}€</Text>
               <Text style={styles.centerSub}>total</Text>
             </View>
           )}

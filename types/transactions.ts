@@ -16,6 +16,7 @@ export interface Transactions {
     type: TransactionType;
     category: TransactionCategory;
     date: string; // ISO format : "2026-05-06"
+    recurring: boolean;
 }
 
 export const CATEGORY_COLORS: Record<TransactionCategory, string> = {

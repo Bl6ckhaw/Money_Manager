@@ -8,6 +8,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { Transactions, TransactionCategory, TransactionType } from '../../types/transactions';
 import { useTransactions } from '../../context/transactionsContext';
@@ -34,6 +35,7 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [category, setCategory] = useState<TransactionCategory>('Other');
+  const [recurring, setRecurring] = useState(false);
 
   const handleSubmit = () => {
     if (!label.trim() || !amount) return;
@@ -45,6 +47,7 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
       type,
       category,
       date: new Date().toISOString().split('T')[0],
+      recurring,
     };
 
     addTransactions(newTransaction);
@@ -56,6 +59,7 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
     setAmount('');
     setType('expense');
     setCategory('Other');
+    setRecurring(false);
     onClose();
   };
 
@@ -123,6 +127,22 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
                 </Text>
               </TouchableOpacity>
             ))}
+          </View>
+
+          {/* Recurring toggle */}
+          <View style={styles.recurringRow}>
+            <View style={styles.recurringText}>
+              <Text style={styles.recurringTitle}>Repeat monthly</Text>
+              <Text style={styles.recurringSubtitle}>
+                Automatically added every month
+              </Text>
+            </View>
+            <Switch
+              value={recurring}
+              onValueChange={setRecurring}
+              trackColor={{ false: '#eee', true: '#6366f1' }}
+              thumbColor={'#fff'}
+            />
           </View>
 
           {/* Actions */}
@@ -254,5 +274,27 @@ const styles = StyleSheet.create({
   confirmText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  recurringRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#fafafa',
+  borderRadius: 12,
+  padding: 14,
+  borderWidth: 1,
+  borderColor: '#eee',
+  },
+  recurringText: {
+    gap: 2,
+  },
+  recurringTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#222',
+  },
+  recurringSubtitle: {
+    fontSize: 12,
+    color: '#888',
   },
 });

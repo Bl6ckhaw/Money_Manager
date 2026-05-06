@@ -1,24 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Transactions } from '../../types/transactions';
+import { useTransactions } from '../../context/transactionsContext';
 
 interface Props {
     transactions: Transactions;
 }
 
 export default function TransactionsItem({ transactions }: Props) {
+    const { deleteTransaction } = useTransactions();
     const isIncome = transactions.type === 'income';
 
     return (
-        <View style={styles.container}>
-      <View style={styles.left}>
-        <Text style={styles.label}>{transactions.label}</Text>
-        <Text style={styles.category}>{transactions.category}</Text>
-      </View>
-      <Text style={[styles.amount, isIncome ? styles.income : styles.expense]}>
-        {isIncome ? '+' : '-'} {transactions.amount} €
-      </Text>
-    </View>
+        <TouchableOpacity style={styles.container} onPress={() => Alert.alert('Do you want to delete this transaction?', '', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => deleteTransaction(transactions.id) },
+        ])}>        
+          <View style={styles.left}>
+            <Text style={styles.label}>{transactions.label}</Text>
+            <Text style={styles.category}>{transactions.category}</Text>
+          </View>
+          <Text style={[styles.amount, isIncome ? styles.income : styles.expense]}>
+            {isIncome ? '+' : '-'} {transactions.amount} €
+          </Text>
+        </TouchableOpacity>
   );
 }
 

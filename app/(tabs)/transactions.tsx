@@ -1,32 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useTransactions } from '../../context/transactionsContext';
 import TransactionsItem from '../components/TransactionsItem';
 import AddTransactionModal from '../components/AddTransactionsModal';
+import MonthNavigator from '../components/MonthNavigator';
 
 export default function Transactions() {
-    const { transactions } = useTransactions();
+    const { transactions, selectedMonth, selectedYear } = useTransactions();
     const [ModalVisible, setIsModalVisible] = useState(false);
 
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
-    const monthlyTransactions = transactions.filter((t) => {
-        const date = new Date(t.date);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
+    const { getTransactionsForMonth } = useTransactions();
+
+    const monthlyTransactions = useMemo(
+      () => getTransactionsForMonth(selectedMonth, selectedYear),
+      [selectedMonth, selectedYear, transactions]
+    );
 
     return (
         <View style={styles.container}>
 
         {/* Header summary */}
-        <View style={styles.header}>
-            <Text style={styles.headerTitle}>Mai 2026</Text>
-            <Text style={styles.headerCount}>
-            {monthlyTransactions.length} transactions
-            </Text>
-        </View>
+        <MonthNavigator />
 
         {/* List */}
         <FlatList
