@@ -1,8 +1,10 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTransactions } from '../../context/transactionsContext';
+import { useSettings } from '../../context/settingsContext';
 
 export default function MonthNavigator() {
     const { selectedMonth, selectedYear, goToPreviousMonth, goToNextMonth } = useTransactions();
+    const { theme } = useSettings();
 
     const now = new Date();
     const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
@@ -10,16 +12,16 @@ export default function MonthNavigator() {
     const monthName = new Date(selectedYear, selectedMonth, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
 
             <TouchableOpacity onPress={goToPreviousMonth} style={styles.arrow}>
-                <Text style={styles.arrowText}>‹</Text>
+                <Text style={[styles.arrowText, { color: theme.primary }]}>‹</Text>
             </TouchableOpacity>
 
-            <Text style={styles.label}>{monthName}</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{monthName}</Text>
 
             <TouchableOpacity onPress={goToNextMonth} style={styles.arrow} disabled={isCurrentMonth}>
-                <Text style={[styles.arrowText, isCurrentMonth && styles.arrowDisabled]}>›</Text>
+                <Text style={[styles.arrowText, { color: isCurrentMonth ? theme.textTertiary : theme.primary }]}>›</Text>
             </TouchableOpacity>
         </View>
     )
@@ -30,10 +32,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
         padding: 16,
         borderBottomWidth: 1,
-        borderColor: '#eee',
     },
     arrow: {
         padding: 8,
@@ -42,16 +42,11 @@ const styles = StyleSheet.create({
     },
     arrowText: {
         fontSize: 28,
-        color: '#6366f1',
         fontWeight: '600',
-    },
-    arrowDisabled: {
-        color: '#ccc',
     },
     label: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#222',
         textTransform: 'capitalize',
     },
 }); 

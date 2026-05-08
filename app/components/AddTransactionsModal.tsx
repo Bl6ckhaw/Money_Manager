@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Transactions, TransactionCategory, TransactionType } from '../../types/transactions';
 import { useTransactions } from '../../context/transactionsContext';
+import { useSettings } from '../../context/settingsContext';
 
 interface Props {
   visible: boolean;
@@ -30,6 +31,7 @@ const CATEGORIES: TransactionCategory[] = [
 
 export default function AddTransactionModal({ visible, onClose }: Props) {
   const { addTransactions } = useTransactions();
+  const { theme } = useSettings();
 
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
@@ -67,28 +69,36 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
+        style={[styles.overlay, { backgroundColor: theme.overlay }]}
       >
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: theme.card }]}>
 
           {/* Title */}
-          <Text style={styles.title}>New Transaction</Text>
+          <Text style={[styles.title, { color: theme.text }]}>New Transaction</Text>
 
           {/* Type toggle */}
-          <View style={styles.toggle}>
+          <View style={[styles.toggle, { backgroundColor: theme.divider }]}>
             <TouchableOpacity
-              style={[styles.toggleBtn, type === 'expense' && styles.toggleActive]}
+              style={[
+                styles.toggleBtn,
+                type === 'expense' && styles.toggleActive,
+                type === 'expense' && { backgroundColor: theme.card },
+              ]}
               onPress={() => setType('expense')}
             >
-              <Text style={[styles.toggleText, type === 'expense' && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, { color: type === 'expense' ? theme.text : theme.textSecondary }]}>
                 Expense
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleBtn, type === 'income' && styles.toggleActive]}
+              style={[
+                styles.toggleBtn,
+                type === 'income' && styles.toggleActive,
+                type === 'income' && { backgroundColor: theme.card },
+              ]}
               onPress={() => setType('income')}
             >
-              <Text style={[styles.toggleText, type === 'income' && styles.toggleTextActive]}>
+              <Text style={[styles.toggleText, { color: type === 'income' ? theme.text : theme.textSecondary }]}>
                 Income
               </Text>
             </TouchableOpacity>
@@ -96,33 +106,37 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
 
           {/* Label input */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.border, backgroundColor: theme.input, color: theme.text }]}
             placeholder="Label (ex: Groceries)"
-            placeholderTextColor="#888"
+            placeholderTextColor={theme.textTertiary}
             value={label}
             onChangeText={setLabel}
           />
 
           {/* Amount input */}
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.border, backgroundColor: theme.input, color: theme.text }]}
             placeholder="Amount (ex: 42.50)"
-            placeholderTextColor="#888"
+            placeholderTextColor={theme.textTertiary}
             value={amount}
             onChangeText={setAmount}
             keyboardType="decimal-pad"
           />
 
           {/* Category picker */}
-          <Text style={styles.sectionLabel}>Category</Text>
+          <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>Category</Text>
           <View style={styles.categories}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat}
-                style={[styles.catBtn, category === cat && styles.catActive]}
+                style={[
+                  styles.catBtn,
+                  { borderColor: theme.border, backgroundColor: theme.input },
+                  category === cat && { backgroundColor: theme.primary, borderColor: theme.primary },
+                ]}
                 onPress={() => setCategory(cat)}
               >
-                <Text style={[styles.catText, category === cat && styles.catTextActive]}>
+                <Text style={[styles.catText, { color: category === cat ? theme.card : theme.textSecondary, fontWeight: category === cat ? '600' : '400' }]}>
                   {cat}
                 </Text>
               </TouchableOpacity>
@@ -130,28 +144,28 @@ export default function AddTransactionModal({ visible, onClose }: Props) {
           </View>
 
           {/* Recurring toggle */}
-          <View style={styles.recurringRow}>
+          <View style={[styles.recurringRow, { backgroundColor: theme.input, borderColor: theme.border }]}>
             <View style={styles.recurringText}>
-              <Text style={styles.recurringTitle}>Repeat monthly</Text>
-              <Text style={styles.recurringSubtitle}>
+              <Text style={[styles.recurringTitle, { color: theme.text }]}>Repeat monthly</Text>
+              <Text style={[styles.recurringSubtitle, { color: theme.textSecondary }]}>
                 Automatically added every month
               </Text>
             </View>
             <Switch
               value={recurring}
               onValueChange={setRecurring}
-              trackColor={{ false: '#eee', true: '#6366f1' }}
-              thumbColor={'#fff'}
+              trackColor={{ false: theme.border, true: theme.primary }}
+              thumbColor={theme.card}
             />
           </View>
 
           {/* Actions */}
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+            <TouchableOpacity style={[styles.cancelBtn, { borderColor: theme.border }]} onPress={handleClose}>
+              <Text style={[styles.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmBtn} onPress={handleSubmit}>
-              <Text style={styles.confirmText}>Add</Text>
+            <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: theme.primary }]} onPress={handleSubmit}>
+              <Text style={[styles.confirmText, { color: theme.card }]}>Add</Text>
             </TouchableOpacity>
           </View>
 
@@ -165,10 +179,8 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   sheet: {
-    backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -177,12 +189,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#222',
     textAlign: 'center',
   },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: '#f1f1f1',
     borderRadius: 12,
     padding: 4,
   },
@@ -193,7 +203,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleActive: {
-    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -202,24 +211,16 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 14,
-    color: '#888',
     fontWeight: '600',
-  },
-  toggleTextActive: {
-    color: '#222',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#eee',
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    backgroundColor: '#fafafa',
-
   },
   sectionLabel: {
     fontSize: 13,
-    color: '#888',
     fontWeight: '600',
   },
   categories: {
@@ -232,20 +233,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa',
-  },
-  catActive: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
   },
   catText: {
     fontSize: 13,
-    color: '#555',
-  },
-  catTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
@@ -257,33 +247,27 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eee',
     alignItems: 'center',
   },
   cancelText: {
-    color: '#888',
     fontWeight: '600',
   },
   confirmBtn: {
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#6366f1',
     alignItems: 'center',
   },
   confirmText: {
-    color: '#fff',
     fontWeight: '700',
   },
   recurringRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  backgroundColor: '#fafafa',
-  borderRadius: 12,
-  padding: 14,
-  borderWidth: 1,
-  borderColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
   },
   recurringText: {
     gap: 2,
@@ -291,10 +275,8 @@ const styles = StyleSheet.create({
   recurringTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#222',
   },
   recurringSubtitle: {
     fontSize: 12,
-    color: '#888',
   },
 });

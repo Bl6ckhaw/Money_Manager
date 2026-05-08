@@ -1,13 +1,16 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { CATEGORY_COLORS, TransactionCategory } from '../../types/transactions';
+import { TransactionCategory } from '../../types/transactions';
 import { Transactions } from '../../types/transactions';
 import { useMemo } from 'react';
+import { useSettings } from '../../context/settingsContext';
 
 interface Props {
     transactions: Transactions[];
 }
 
 export default function ExpenseBar({ transactions }: Props) {
+    const { theme, categoryColors } = useSettings();
+    
     // total expenses
     const total = useMemo(
         () => transactions
@@ -34,22 +37,23 @@ export default function ExpenseBar({ transactions }: Props) {
 
     if (total === 0) {
         return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Expenses</Text>
-            <View style={styles.emptyBar} />
-            <Text style={styles.empty}>No expenses this month</Text>
+        <View style={[styles.container, { backgroundColor: theme.card }]}>
+            <Text style={[styles.title, { color: theme.textSecondary }]}>Expenses</Text>
+            <View style={[styles.emptyBar, { backgroundColor: theme.divider }]} />
+            <Text style={[styles.empty, { color: theme.textTertiary }]}>No expenses this month</Text>
         </View>
         );
     }
+    
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.card }]}>
 
-        <Text style={styles.title}>Expenses breakdown</Text>
-        <Text style={styles.total}>{total.toFixed(2)}€</Text>
+        <Text style={[styles.title, { color: theme.textSecondary }]}>Expenses breakdown</Text>
+        <Text style={[styles.total, { color: theme.text }]}>{total.toFixed(2)}€</Text>
 
         {/* The bar */}
-        <View style={styles.bar}>
+        <View style={[styles.bar, { backgroundColor: theme.divider }]}>
             {segments.map((seg, index) => (
             <View
                 key={seg.category}
@@ -57,7 +61,7 @@ export default function ExpenseBar({ transactions }: Props) {
                 styles.segment,
                 {
                     flex: seg.percentage,
-                    backgroundColor: CATEGORY_COLORS[seg.category],
+                    backgroundColor: categoryColors[seg.category],
                     borderTopLeftRadius: index === 0 ? 8 : 0,
                     borderBottomLeftRadius: index === 0 ? 8 : 0,
                     borderTopRightRadius: index === segments.length - 1 ? 8 : 0,
@@ -72,9 +76,9 @@ export default function ExpenseBar({ transactions }: Props) {
         <View style={styles.legend}>
             {segments.map((seg) => (
             <View key={seg.category} style={styles.legendRow}>
-                <View style={[styles.dot, { backgroundColor: CATEGORY_COLORS[seg.category] }]} />
-                <Text style={styles.legendLabel}>{seg.category}</Text>
-                <Text style={styles.legendAmount}>{seg.amount.toFixed(2)}€</Text>
+                <View style={[styles.dot, { backgroundColor: categoryColors[seg.category] }]} />
+                <Text style={[styles.legendLabel, { color: theme.text }]}>{seg.category}</Text>
+                <Text style={[styles.legendAmount, { color: theme.text }]}>{seg.amount.toFixed(2)}€</Text>
             </View>
             ))}
         </View>
@@ -85,7 +89,6 @@ export default function ExpenseBar({ transactions }: Props) {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
         borderRadius: 16,
         padding: 20,
         gap: 12,
@@ -93,19 +96,16 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#888',
     },
     total: {
         fontSize: 22,
         fontWeight: '700',
-        color: '#222',
     },
     bar: {
         flexDirection: 'row',
         height: 20,
         borderRadius: 8,
         overflow: 'hidden',
-        backgroundColor: '#f1f1f1',
     },
     segment: {
         height: '100%',
@@ -113,11 +113,9 @@ const styles = StyleSheet.create({
     emptyBar: {
         height: 20,
         borderRadius: 8,
-        backgroundColor: '#f1f1f1',
     },
     empty: {
         fontSize: 13,
-        color: '#aaa',
         textAlign: 'center',
     },
     legend: {
@@ -137,12 +135,10 @@ const styles = StyleSheet.create({
     legendLabel: {
         flex: 1,
         fontSize: 13,
-        color: '#555',
         textTransform: 'capitalize',
     },
     legendAmount: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#222',
     },
 });

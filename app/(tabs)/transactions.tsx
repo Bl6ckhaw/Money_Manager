@@ -5,13 +5,18 @@ import { useTransactions } from '../../context/transactionsContext';
 import TransactionsItem from '../components/TransactionsItem';
 import AddTransactionModal from '../components/AddTransactionsModal';
 import MonthNavigator from '../components/MonthNavigator';
+import { useSettings } from '../../context/settingsContext';
 
 export default function Transactions() {
     const { transactions, selectedMonth, selectedYear } = useTransactions();
     const [ModalVisible, setIsModalVisible] = useState(false);
+    const { theme } = useSettings();
 
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
+
+    const now = new Date();
+    const isCurrentMonth = selectedMonth === currentMonth && selectedYear === currentYear;
 
     const { getTransactionsForMonth } = useTransactions();
 
@@ -21,7 +26,7 @@ export default function Transactions() {
     );
 
     return (
-        <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
 
         {/* Header summary */}
         <MonthNavigator />
@@ -30,15 +35,21 @@ export default function Transactions() {
         <FlatList
             data={monthlyTransactions}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <TransactionsItem transactions={item} />}
+            renderItem={({ item }) => <TransactionsItem transactions={item} isCurrentMonth={isCurrentMonth} />}
             ListEmptyComponent={
-            <Text style={styles.empty}>No transactions this month</Text>
+            <Text style={[styles.empty, { color: theme.textTertiary }]}>No transactions this month</Text>
             }
         />
 
         {/* FAB button */}
-        <TouchableOpacity style={styles.fab} onPress={() => setIsModalVisible(true)}>
-            <Text style={styles.fabText}>+</Text>
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            { backgroundColor: isCurrentMonth ? theme.primary : theme.border },
+          ]}
+          onPress={() => isCurrentMonth && setIsModalVisible(true)}
+        >
+            <Text style={[styles.fabText, { color: theme.background }]}>+</Text>
         </TouchableOpacity>
 
         {/* Modal */}
@@ -55,28 +66,10 @@ export default function Transactions() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#222',
-  },
-  headerCount: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 4,
   },
   empty: {
     textAlign: 'center',
     marginTop: 60,
-    color: '#aaa',
     fontSize: 15,
   },
   fab: {
@@ -86,7 +79,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#6366f1',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -97,7 +89,6 @@ const styles = StyleSheet.create({
   },
   fabText: {
     fontSize: 28,
-    color: '#fff',
     lineHeight: 32,
   },
 });

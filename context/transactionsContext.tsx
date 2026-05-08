@@ -1,20 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, use } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transactions } from '../types/transactions';
+import { Transactions, TransactionException } from '../types/transactions';
 
 const STORAGE_KEY = 'money_manager_transactions';
+const EXCEPTIONS_KEY = 'money_manager_exceptions';
 
 
 interface TransactionsContextType {
     transactions: Transactions[];
     addTransactions: (transaction: Transactions) => void;
     deleteTransaction: (id: string) => void;
+    updateTransaction: (transaction: Transactions) => void;
+    addException: (exception: TransactionException) => void;
     isLoading: boolean;
     selectedMonth: number;
     selectedYear: number;
     goToPreviousMonth: () => void;
     goToNextMonth: () => void;
     getTransactionsForMonth: (month: number, year: number) => Transactions[];
+    exceptions: TransactionException[];
 }
 
 const TransactionContext = createContext<TransactionsContextType | undefined>(undefined);
@@ -22,9 +26,12 @@ const TransactionContext = createContext<TransactionsContextType | undefined>(un
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
     const [transactions, setTransactions] = useState<Transactions[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [exceptions, setExceptions] = useState<TransactionException[]>([]);
 
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    /* LOAD / SAVE TRANSACTIONS */
 
     useEffect(() => {
         const loadTransactions = async () => {
@@ -63,6 +70,39 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         saveTransactions();
     }, [transactions]);
 
+    /* EXCEPTIONS : MODIFY / DELETE */ 
+
+    useEffect(() => {
+        const loadExceptions = async () => {
+            try {
+            const stored = await AsyncStorage.getItem(EXCEPTIONS_KEY);
+            if (stored !== null) {
+                setExceptions(JSON.parse(stored));
+            }
+            } catch (error) {
+            console.error('Failed to load exceptions :', error);
+            }
+        };
+
+        loadExceptions();
+    }, []);
+
+    useEffect(() => {
+        if (isLoading) return;
+
+        const saveExceptions = async () => {
+            try {
+            await AsyncStorage.setItem(EXCEPTIONS_KEY, JSON.stringify(exceptions));
+            } catch (error) {
+            console.error('Failed to save exceptions :', error);
+            }
+        };
+
+        saveExceptions();
+    }, [exceptions]);
+
+    /* NAVIGATION */
+
     const goToPreviousMonth = () => {
         if (selectedMonth === 0) {
             setSelectedMonth(11);
@@ -81,6 +121,8 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         }
     };
 
+    /* TRANSACTIONS MANIPULATION */
+
     const addTransactions = (transactions: Transactions) => {
         setTransactions((prev) => [transactions, ...prev]);
 
@@ -88,6 +130,16 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
 
     const deleteTransaction = (id: string) => {
         setTransactions((prev) => prev.filter((t) => t.id !== id));
+    };
+
+    const updateTransaction = (updated: Transactions) => {
+        setTransactions((prev) => prev.map(t => t.id === updated.id ? updated : t));
+    };
+
+    const addException = (exceptions: TransactionException) => {
+        setExceptions((prev) => [...prev, exceptions]);
+
+        setTransactions((prev) => prev.map(t => t.id === exceptions.transactionId ? { ...t, recurring:false } : t));
     };
 
     const getTransactionsForMonth = (month: number, year: number): Transactions[] => {
@@ -109,6 +161,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         const explicitLabels = explicit.map((t) => t.label);
         const recurringInjected = recuringBase
             .filter((t) => !explicitLabels.includes(t.label))
+            .filter((t) => !exceptions.some((e) => e.transactionId === t.id && e.month === month && e.year === year))
             .reduce((acc: Transactions[], t) => {
                 const exists = acc.find((a) => a.label === t.label);
                 if (!exists){
@@ -129,12 +182,15 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
                 transactions, 
                 addTransactions, 
                 deleteTransaction,
+                updateTransaction,
+                addException,
                 isLoading, 
                 selectedMonth, 
                 selectedYear, 
                 goToPreviousMonth, 
                 goToNextMonth,
-                getTransactionsForMonth
+                getTransactionsForMonth,
+                exceptions
             }}>
             {children}
         </TransactionContext.Provider>

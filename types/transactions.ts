@@ -28,3 +28,9 @@ export const CATEGORY_COLORS: Record<TransactionCategory, string> = {
     'Investment': '#e3f63b',  
     'Other': '#94a3b8',       
 };
+
+export interface TransactionException {
+    transactionId: string;
+    month: number;
+    year: number;
+}

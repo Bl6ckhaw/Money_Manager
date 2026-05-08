@@ -1,21 +1,25 @@
-import { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { useTransactions } from '../../context/transactionsContext';
-import { CATEGORY_COLORS, TransactionCategory } from '../../types/transactions';
+import { TransactionCategory } from '../../types/transactions';
+import { useSettings } from '../../context/settingsContext';
+import MonthlyBarChart from '../components/MonthlyBarChart';
+
+const { width } = Dimensions.get('window');
+
+function getMonthShortName(month: number): string {
+  return new Date(2026, month, 1).toLocaleString('default', { month: 'short' });
+}
 
 export default function GraphScreen() {
   const { transactions, selectedMonth, selectedYear, getTransactionsForMonth } = useTransactions();
+  const { theme, categoryColors } = useSettings();
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const monthlyExpenses = useMemo(
-    () => (getTransactionsForMonth(selectedMonth, selectedYear) ?? []).filter((t) => {
-      const date = new Date(t.date);
-      return (
-        t.type === 'expense' &&
-        date.getMonth() === selectedMonth &&
-        date.getFullYear() === selectedYear
-      );
-    }),
+    () => getTransactionsForMonth(selectedMonth, selectedYear)
+      .filter(t => t.type === 'expense'),
     [transactions, selectedMonth, selectedYear]
   );
 
@@ -31,68 +35,112 @@ export default function GraphScreen() {
     return map;
     }, [monthlyExpenses]);
 
-
   const total = useMemo(
     () => Object.values(grouped ?? {}).reduce((sum, v) => sum + (v ?? 0), 0),
     [grouped]
   );
 
-  
-
   const pieData = useMemo(
     () => Object.entries(grouped ?? {}).map(([cat, amount]) => ({
       value: amount ?? 0,
-      color: CATEGORY_COLORS[cat as TransactionCategory],
+      color: categoryColors [cat as TransactionCategory],
       label: cat,
       percentage: total > 0 ? ((amount ?? 0) / total * 100).toFixed(1) : '0',
     })),
-    [grouped, total]
+    [grouped, total, categoryColors]
   );
 
   // Empty state
   if (pieData.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>No expenses this month</Text>
+      <View style={[styles.empty, { backgroundColor: theme.background }]}>
+        <Text style={[styles.emptyText, { color: theme.textTertiary }]}>No expenses this month</Text>
       </View>
     );
   }
-    
+
+  const charts = [
+    {
+      id: 'pie',
+      title: 'Expenses by category',
+      component: (
+        <View style={[styles.chartContainer, { backgroundColor: theme.background }]}>
+          <Text style={[styles.title, { color: theme.text }]}>Expenses by category</Text>
+          <View style={styles.pieChartContainer}>
+            <PieChart
+              data={pieData}
+              donut
+              radius={120}
+              innerRadius={70}
+              innerCircleColor={theme.background}
+              centerLabelComponent={() => (
+                <View style={styles.centerLabel}>
+                  <Text style={[styles.centerAmount, { color: theme.text }]}>{total.toFixed(2)}€</Text>
+                  <Text style={[styles.centerSub, { color: theme.textSecondary }]}>total</Text>
+                </View>
+              )}
+            />
+          </View>
+
+          {/* Legend */}
+          <View style={[styles.legend, { backgroundColor: theme.card }]}>
+            {pieData.map((item) => (
+              <View key={item.label} style={styles.legendRow}>
+                <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                <Text style={[styles.legendLabel, { color: theme.text }]}>{item.label}</Text>
+                <Text style={[styles.legendPercent, { color: theme.textSecondary }]}>{item.percentage}%</Text>
+                <Text style={[styles.legendAmount, { color: theme.text }]}>{item.value.toFixed(2)}€</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ),
+    },
+    {
+      id: 'bar',
+      title: 'Monthly expenses',
+      component: <MonthlyBarChart />,
+    },
+  ];
+
+  const handleScroll = (event: any) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / width);
+    setCurrentIndex(index);
+  };
 
   return (
-    <View style={styles.container}>
-
-      {/* Title */}
-      <Text style={styles.title}>Expenses by category</Text>
-
-      {/* Chart */}
-      <View style={styles.chartContainer}>
-        <PieChart
-          data={pieData}
-          donut
-          radius={120}
-          innerRadius={70}
-          centerLabelComponent={() => (
-            <View style={styles.centerLabel}>
-              <Text style={styles.centerAmount}>{total.toFixed(2)}€</Text>
-              <Text style={styles.centerSub}>total</Text>
-            </View>
-          )}
-        />
-      </View>
-
-      {/* Legend */}
-      <View style={styles.legend}>
-        {pieData.map((item) => (
-          <View key={item.label} style={styles.legendRow}>
-            <View style={[styles.dot, { backgroundColor: item.color }]} />
-            <Text style={styles.legendLabel}>{item.label}</Text>
-            <Text style={styles.legendPercent}>{item.percentage}%</Text>
-            <Text style={styles.legendAmount}>{item.value.toFixed(2)}€</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* FlatList Carousel */}
+      <FlatList
+        data={charts}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={{ width }}>
+            {item.component}
           </View>
+        )}
+        horizontal
+        pagingEnabled
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        showsHorizontalScrollIndicator={false}
+      />
+
+      {/* Dots Indicator */}
+      <View style={styles.dotsContainer}>
+        {charts.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              {
+                backgroundColor: index === currentIndex ? theme.primary : theme.textTabsSecondary,
+              },
+            ]}
+          />
         ))}
       </View>
-
     </View>
   );
 }
@@ -100,16 +148,17 @@ export default function GraphScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-    gap: 24,
+    gap: 16,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#222',
   },
   chartContainer: {
+    padding: 20,
+    gap: 24,
+  },
+  pieChartContainer: {
     alignItems: 'center',
   },
   centerLabel: {
@@ -118,14 +167,11 @@ const styles = StyleSheet.create({
   centerAmount: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#222',
   },
   centerSub: {
     fontSize: 13,
-    color: '#888',
   },
   legend: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -135,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  dot: {
+  colorDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
@@ -143,21 +189,30 @@ const styles = StyleSheet.create({
   legendLabel: {
     flex: 1,
     fontSize: 14,
-    color: '#444',
     textTransform: 'capitalize',
   },
   legendPercent: {
     fontSize: 13,
-    color: '#888',
     width: 45,
     textAlign: 'right',
   },
   legendAmount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#222',
     width: 70,
     textAlign: 'right',
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: 16,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   empty: {
     flex: 1,
@@ -166,6 +221,5 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#aaa',
   },
 });
