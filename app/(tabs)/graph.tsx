@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { useTransactions } from '../../context/transactionsContext';
 import { TransactionCategory } from '../../types/transactions';
 import { useSettings } from '../../context/settingsContext';
 import MonthlyBarChart from '../components/MonthlyBarChart';
+import CustomRangeModal from '../components/CustomRangeModal';
 
 const { width } = Dimensions.get('window');
 
@@ -12,15 +13,98 @@ function getMonthShortName(month: number): string {
   return new Date(2026, month, 1).toLocaleString('default', { month: 'short' });
 }
 
+function getMonthName(month: number, year: number): string {
+  return new Date(year, month, 1).toLocaleString('default', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export default function GraphScreen() {
   const { transactions, selectedMonth, selectedYear, getTransactionsForMonth } = useTransactions();
   const { theme, categoryColors } = useSettings();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [ range, setRange ] = useState<'1 month' | '3 months' | '12 months' | 'custom'>('1 month');
+  const [ customStart, setCustomStart ] = useState({ month: selectedMonth, year: selectedYear });
+  const [ customEnd, setCustomEnd ] = useState({ month: selectedMonth, year: selectedYear });
+  const [ customModalVisible, setCustomModalVisible ] = useState(false);
+
+  const rangeLabel = useMemo(() => {
+    if (range === '1 month') {
+      return getMonthName(selectedMonth, selectedYear);
+    }
+    if (range === '3 months') {
+      const start = selectedMonth - 2 < 0
+        ? { month: selectedMonth + 10, year: selectedYear - 1 }
+        : { month: selectedMonth - 2, year: selectedYear };
+      return `${getMonthName(start.month, start.year)} — ${getMonthName(selectedMonth, selectedYear)}`;
+    }
+    if (range === '12 months') {
+      const now = new Date();
+      const start = now.getMonth() - 11 < 0
+        ? { month: now.getMonth() + 1, year: now.getFullYear() - 1 }
+        : { month: now.getMonth() - 11, year: now.getFullYear() };
+      return `${getMonthName(start.month, start.year)} — ${getMonthName(now.getMonth(), now.getFullYear())}`;
+    }
+    if (range === 'custom') {
+      return `${getMonthName(customStart.month, customStart.year)} — ${getMonthName(customEnd.month, customEnd.year)}`;
+    }
+    return '';
+  }, [range, selectedMonth, selectedYear, customStart, customEnd]);
+
+  const getTransactionsForRange = useMemo(() => {
+    const now = new Date();
+
+    let months: { month: number; year: number }[] = [];
+
+    if (range === '1 month') {
+      months = [{ month: selectedMonth, year: selectedYear }];
+    }
+
+    if (range === '3 months') {
+      for (let i = 2; i >= 0; i--) {
+        let m = selectedMonth - i;
+        let y = selectedYear;
+        if (m < 0) { m += 12; y -= 1; }
+        months.push({ month: m, year: y });
+      }
+    }
+
+    if (range === '12 months') {
+      for (let i = 11; i >= 0; i--) {
+        let m = now.getMonth() - i;
+        let y = now.getFullYear();
+        if (m < 0) { m += 12; y -= 1; }
+        months.push({ month: m, year: y });
+      }
+    }
+
+    if (range === 'custom') {
+      const startTime = customStart.year * 12 + customStart.month;
+      const endTime = customEnd.year * 12 + customEnd.month;
+      for (let t = startTime; t <= endTime; t++) {
+        months.push({ month: t % 12, year: Math.floor(t / 12) });
+      }
+    }
+
+    // merge all transactions across months
+    const allTransactions = months.flatMap(({ month, year }) =>
+      getTransactionsForMonth(month, year)
+    );
+
+    // deduplicate recurring — keep unique id
+    const seen = new Set<string>();
+    return allTransactions.filter(t => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+
+  }, [range, selectedMonth, selectedYear, customStart, customEnd, transactions]);
 
   const monthlyExpenses = useMemo(
-    () => getTransactionsForMonth(selectedMonth, selectedYear)
-      .filter(t => t.type === 'expense'),
-    [transactions, selectedMonth, selectedYear]
+    () => getTransactionsForRange.filter(t => t.type === 'expense'),
+    [getTransactionsForRange]
   );
 
   const grouped = useMemo(() => {
@@ -66,7 +150,35 @@ export default function GraphScreen() {
       component: (
         <View style={[styles.chartContainer, { backgroundColor: theme.background }]}>
           <Text style={[styles.title, { color: theme.text }]}>Expenses by category</Text>
+          {/* Range selector */}
+          <View style={[styles.rangeSelector, { backgroundColor: theme.card }]}>
+            {(['1 month', '3 months', '12 months', 'custom'] as const).map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[
+                  styles.rangeBtn,
+                  range === r && { backgroundColor: theme.primary },
+                ]}
+                onPress={() => r === 'custom'
+                  ? setCustomModalVisible(true)
+                  : setRange(r)
+                }
+              >
+                <Text style={[
+                  styles.rangeBtnText,
+                  { color: range === r ? theme.background : theme.textSecondary },
+                ]}>
+                  {r === 'custom' ? '⚙' : r}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* Range label */}
+          <Text style={[styles.rangeLabel, { color: theme.textSecondary }]}>
+            {rangeLabel}
+          </Text>
           <View style={styles.pieChartContainer}>
+            
             <PieChart
               data={pieData}
               donut
@@ -93,6 +205,18 @@ export default function GraphScreen() {
               </View>
             ))}
           </View>
+          <CustomRangeModal
+            visible={customModalVisible}
+            onClose={() => setCustomModalVisible(false)}
+            onConfirm={(start, end) => {
+              setCustomStart(start);
+              setCustomEnd(end);
+              setRange('custom');
+            }}
+            initialStart={customStart}
+            initialEnd={customEnd}
+          />
+
         </View>
       ),
     },
@@ -221,5 +345,28 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+  },
+  rangeSelector: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  rangeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rangeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  rangeLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    textTransform: 'capitalize',
+    marginBottom: 4,
   },
 });

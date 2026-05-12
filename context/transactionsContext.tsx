@@ -36,13 +36,37 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         const loadTransactions = async () => {
             try {
+                /* remove item
+                await AsyncStorage.removeItem(STORAGE_KEY);
+                await AsyncStorage.removeItem(EXCEPTIONS_KEY);
+                */
                 const stored = await AsyncStorage.getItem(STORAGE_KEY);
 
                 if (stored !== null){
                     const parsed = JSON.parse(stored) as Transactions[];
                     setTransactions(parsed);
                 }else {
-                    setTransactions([]);
+                    setTransactions([
+                        {
+                            id: '1',
+                            label: 'Salary',
+                            amount: 3000,
+                            date: '2026-04-01',
+                            type: 'income',
+                            category: 'Salary',
+                            recurring: false,
+                        },
+                        {
+                            id: '2',
+                            label: 'Groceries',
+                            amount: 150,
+                            date: '2026-01-05',
+                            type: 'expense',
+                            category: 'Food',
+                            recurring: false,
+                        },
+
+                    ]);
                 }
             } catch (error) {
                 console.error('Error loading transactions:', error);
